@@ -4,6 +4,7 @@ from Adafruit_IO import Client, Dashboard, Feed, RequestError
 
 import weatherhat
 import credentials
+import csv
 
 sensor = weatherhat.WeatherHAT()
 
@@ -71,7 +72,7 @@ print("Discarding the first few BME280 readings...")
 sleep(10.0)
 
 # Read all the sensors and start sending data
-
+from datetime import datetime
 while True:
     sensor.update(interval=600.0)
 
@@ -86,6 +87,12 @@ while True:
     rain = sensor.rain'''
 
     try:
+        now = datetime.now()
+
+        # strftime() method used to create a string
+        # representing the current time.
+        currentTime = now.strftime("%d/%m/%Y, %H:%M:%S")
+        
         aio.send_data(temperature_feed.key, temperature)
         aio.send_data(humidity_feed.key, humidity)
         aio.send_data(pressure_feed.key, pressure)
@@ -93,7 +100,27 @@ while True:
         '''aio.send_data(windspeed_feed.key, windspeed)
         aio.send_data(winddirection_feed.key, winddirection)
         aio.send_data(rain_feed.key, rain)'''
-        print('Data sent to adafruit.io')
+        print('Data sent to adafruit.io ' + currentTime)
+        
+
+        # writing data to csv
+        file_to_open = 'weather-data.csv'
+        csv_file = open(file_to_open, 'a', newline='')
+        file_headings = ['current time', 'temperature', 'humidity', 'pressure', 'light']
+        csv_writer = csv.DictWriter(csv_file, fieldnames=file_headings)
+        #csv_writer.writeheader()
+
+        line_to_write = {
+            'current time': currentTime,
+            'temperature': temperature, 
+            'humidity': humidity,
+            'pressure': pressure,
+            'light': light
+        }
+
+        csv_writer.writerow(line_to_write)
+
+        csv_file.close()
     except Exception as e:
         print(e)
 
