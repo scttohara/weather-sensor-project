@@ -1,10 +1,7 @@
 from time import sleep
-
 from Adafruit_IO import Client, Dashboard, Feed, RequestError
-
 import weatherhat
 import credentials
-import csv
 
 sensor = weatherhat.WeatherHAT()
 
@@ -71,10 +68,16 @@ pressure = sensor.pressure
 print("Discarding the first few BME280 readings...")
 sleep(10.0)
 
+# Main workload area
 # Read all the sensors and start sending data
 from datetime import datetime
+from send_to_gsheets import send_to_gsheets
+
+weather_data_list = []
+count = 0
 while True:
     sensor.update(interval=600.0)
+    count += 1
 
     #wind_direction_cardinal = sensor.degrees_to_cardinal(sensor.wind_direction)
 
@@ -87,12 +90,6 @@ while True:
     rain = sensor.rain'''
 
     try:
-        now = datetime.now()
-
-        # strftime() method used to create a string
-        # representing the current time.
-        currentTime = now.strftime("%d/%m/%Y, %H:%M:%S")
-        
         aio.send_data(temperature_feed.key, temperature)
         aio.send_data(humidity_feed.key, humidity)
         aio.send_data(pressure_feed.key, pressure)
@@ -100,29 +97,34 @@ while True:
         '''aio.send_data(windspeed_feed.key, windspeed)
         aio.send_data(winddirection_feed.key, winddirection)
         aio.send_data(rain_feed.key, rain)'''
-        print('Data sent to adafruit.io ' + currentTime)
+        
+        now = datetime.now()
+
+        # strftime() method used to create a string
+        # representing the current time.
+        currentTime = now.strftime("%d/%m/%Y, %H:%M:%S")
+
+        print('Data sent to adafruit.io' + currentTime)
+
+        line_to_write = [
+            currentTime,
+            temperature, 
+            humidity,
+            pressure,
+            light
+        ]
+
+        weather_data_list.append(line_to_write)
+
+        if count == 72:
+            send_to_gsheets(weather_data_list)
+            weather_data_list.clear()
+            print('Data sent to gsheet' + currentTime)
         
 
-        # writing data to csv
-        file_to_open = 'weather-data.csv'
-        csv_file = open(file_to_open, 'a', newline='')
-        file_headings = ['current time', 'temperature', 'humidity', 'pressure', 'light']
-        csv_writer = csv.DictWriter(csv_file, fieldnames=file_headings)
-        #csv_writer.writeheader()
-
-        line_to_write = {
-            'current time': currentTime,
-            'temperature': temperature, 
-            'humidity': humidity,
-            'pressure': pressure,
-            'light': light
-        }
-
-        csv_writer.writerow(line_to_write)
-
-        csv_file.close()
     except Exception as e:
         print(e)
-
+    
+    
     # leave at least 30 seconds between updates for free Adafruit.io accounts
     sleep(600.0)
