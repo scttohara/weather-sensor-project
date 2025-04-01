@@ -116,10 +116,33 @@ while True:
 
         weather_data_list.append(line_to_write)
 
-        if count == 72:
+        if count == 36:
             send_to_gsheets(weather_data_list)
             weather_data_list.clear()
+            count = 0 
             print('Data sent to gsheet' + currentTime)
+
+        
+        # writing data to csv
+        file_to_open = 'weather-data.csv'
+        csv_file = open(file_to_open, 'a', newline='')
+        file_headings = ['current time', 'temperature', 'humidity', 'pressure', 'light']
+        csv_writer = csv.DictWriter(csv_file, fieldnames=file_headings)
+        #csv_writer.writeheader()
+
+        line_to_write = {
+            'current time': currentTime,
+            'temperature': temperature, 
+            'humidity': humidity,
+            'pressure': pressure,
+            'light': light
+        }
+
+        csv_writer.writerow(line_to_write)
+
+        csv_file.close()
+        
+        print('Data sent to CSV' + currentTime)
         
 
     except Exception as e:
