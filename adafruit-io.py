@@ -1,7 +1,10 @@
 from time import sleep
+
 from Adafruit_IO import Client, Dashboard, Feed, RequestError
+
 import weatherhat
 import credentials
+import csv
 
 sensor = weatherhat.WeatherHAT()
 
@@ -68,7 +71,6 @@ pressure = sensor.pressure
 print("Discarding the first few BME280 readings...")
 sleep(10.0)
 
-# Main workload area
 # Read all the sensors and start sending data
 from datetime import datetime
 from send_to_gsheets import send_to_gsheets
@@ -98,13 +100,14 @@ while True:
         aio.send_data(winddirection_feed.key, winddirection)
         aio.send_data(rain_feed.key, rain)'''
         
+        
         now = datetime.now()
 
         # strftime() method used to create a string
         # representing the current time.
         currentTime = now.strftime("%d/%m/%Y, %H:%M:%S")
-
-        print('Data sent to adafruit.io' + currentTime)
+        
+        print('Data sent to adafruit.io ' + currentTime)
 
         line_to_write = [
             currentTime,
@@ -116,11 +119,12 @@ while True:
 
         weather_data_list.append(line_to_write)
 
-        if count == 36:
+        if count == 6:
             send_to_gsheets(weather_data_list)
             weather_data_list.clear()
-            count = 0 
-            print('Data sent to gsheet' + currentTime)
+            count = 0
+            print('Data sent to gsheet ' + currentTime)
+        
 
         
         # writing data to csv
@@ -130,7 +134,7 @@ while True:
         csv_writer = csv.DictWriter(csv_file, fieldnames=file_headings)
         #csv_writer.writeheader()
 
-        line_to_write = {
+        line_to_write_csv = {
             'current time': currentTime,
             'temperature': temperature, 
             'humidity': humidity,
@@ -138,13 +142,12 @@ while True:
             'light': light
         }
 
-        csv_writer.writerow(line_to_write)
+        csv_writer.writerow(line_to_write_csv)
 
         csv_file.close()
         
-        print('Data sent to CSV' + currentTime)
+        print('Data sent to CSV ' + currentTime)
         
-
     except Exception as e:
         print(e)
     
