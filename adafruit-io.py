@@ -74,15 +74,18 @@ sleep(10.0)
 # Read all the sensors and start sending data
 from datetime import datetime
 from send_to_gsheets import send_to_gsheets
+from neon_db_call import neon_db_call
 
 weather_data_list = []
 count = 0
+id = 8997
 while True:
     sensor.update(interval=600.0)
     count += 1
+    id += 1
 
     #wind_direction_cardinal = sensor.degrees_to_cardinal(sensor.wind_direction)
-
+    now = datetime.now()
     temperature = (sensor.temperature * 1.8) + 32
     humidity = sensor.relative_humidity
     pressure = sensor.pressure
@@ -90,6 +93,10 @@ while True:
     '''windspeed = sensor.wind_speed
     winddirection = wind_direction_cardinal
     rain = sensor.rain'''
+
+    # strftime() method used to create a string
+    # representing the current time.
+    currentTime = now.strftime("%d/%m/%Y, %H:%M:%S")
 
     try:
         aio.send_data(temperature_feed.key, temperature)
@@ -100,16 +107,12 @@ while True:
         aio.send_data(winddirection_feed.key, winddirection)
         aio.send_data(rain_feed.key, rain)'''
         
-        
-        now = datetime.now()
 
-        # strftime() method used to create a string
-        # representing the current time.
-        currentTime = now.strftime("%d/%m/%Y, %H:%M:%S")
         
         print('Data sent to adafruit.io ' + currentTime)
 
         line_to_write = [
+            id,
             currentTime,
             temperature, 
             humidity,
@@ -119,22 +122,24 @@ while True:
 
         weather_data_list.append(line_to_write)
 
+        # this is where we write to gsheets
+        # every 6 intervals 
         if count == 6:
             send_to_gsheets(weather_data_list)
             weather_data_list.clear()
             count = 0
             print('Data sent to gsheet ' + currentTime)
         
-
         
         # writing data to csv
         file_to_open = 'weather-data.csv'
         csv_file = open(file_to_open, 'a', newline='')
-        file_headings = ['current time', 'temperature', 'humidity', 'pressure', 'light']
+        file_headings = ['id', 'current time', 'temperature', 'humidity', 'pressure', 'light']
         csv_writer = csv.DictWriter(csv_file, fieldnames=file_headings)
         #csv_writer.writeheader()
 
         line_to_write_csv = {
+            'id': id, 
             'current time': currentTime,
             'temperature': temperature, 
             'humidity': humidity,
@@ -148,6 +153,10 @@ while True:
         
         print('Data sent to CSV ' + currentTime)
         
+
+        # put call to neon here
+        neon_db_call(line_to_write_csv, now)
+
     except Exception as e:
         print(e)
     
